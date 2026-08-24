@@ -1,0 +1,38 @@
+name: Protect Credit Line
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+
+jobs:
+  check-credit-line:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check credit line is unchanged
+        run: |
+          CREDIT_LINE="Created by Tali Gankin, Tau Class Fall 2025"
+
+          # Get the diff for index.html between base and head
+          git fetch origin ${{ github.base_ref }}
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- index.html)
+
+          # Check if a line containing the credit text was removed or changed
+          if echo "$DIFF" | grep -E "^-" | grep -qF "$CREDIT_LINE"; then
+            echo "❌ The credit line was modified or removed. This is not allowed."
+            exit 1
+          fi
+
+          # Also make sure the line still exists in the file at all
+          if ! grep -qF "$CREDIT_LINE" index.html; then
+            echo "❌ The credit line is missing from index.html entirely."
+            exit 1
+          fi
+
+          echo "✅ Credit line is intact."
